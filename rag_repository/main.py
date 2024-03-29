@@ -1,6 +1,12 @@
 import os
 from git import Repo
 
+import shutil
+
+# remove /repo directory if it exists using python
+if os.path.exists("repo"):
+    shutil.rmtree("repo")
+
 # Clona el repositorio si es necesario
 repo_path = os.getcwd() + "/repo"
 # repo_url = Current folder + /repo
@@ -60,3 +66,41 @@ file_embeddings = encode_texts(file_contents)
 print("")
 
 
+
+
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain.vectorstores.utils import filter_complex_metadata
+
+class DocumentIndexer:
+    def __init__(self):
+        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
+        self.embedding_model = FastEmbedEmbeddings()  # Asegúrate de que este modelo sea el adecuado para tus necesidades.
+
+    def ingest_documents(self, files_to_index):
+        all_chunks = []
+        for file_path in files_to_index:
+            loader = TextLoader(file_path=file_path)
+            doc = loader.load()  # Aquí asumimos que `load()` devuelve un solo bloque de texto.
+            
+            # Si doc no es una cadena de texto, deberías ajustar este código.
+            chunks = self.text_splitter.split_documents(doc)
+            all_chunks.extend(chunks)
+
+        # Ahora, todos los chunks están en all_chunks.
+        # A continuación, calculamos embeddings para cada chunk.
+        documents_with_embeddings = []
+        for chunk in all_chunks:
+            embedding = self.embedding_model.get_embedding(chunk)
+            documents_with_embeddings.append({"text": chunk, "embedding": embedding})
+
+        # Carga los embeddings en Chroma. Ajusta según la versión y API de Chroma que estés utilizando.
+        vector_store = Chroma.from_documents(documents=documents_with_embeddings)
+
+        return vector_store
+
+# Uso de ejemplo:
+indexer = DocumentIndexer()
+vector_store = indexer.ingest_documents(files_to_index)
