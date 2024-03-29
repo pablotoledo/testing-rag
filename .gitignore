@@ -1,5 +1,7 @@
 # Custom Ignore
 repo/
+**/repo/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
